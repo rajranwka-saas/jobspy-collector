@@ -1,4 +1,7 @@
+import json
 import os
+import threading
+from pathlib import Path
 
 from flask import Flask, jsonify, request
 
@@ -6,24 +9,21 @@ from job_pipeline import collect_jobs
 
 
 app = Flask(__name__)
+queue_path = Path(os.getenv("JOB_OUTPUT_JSON", "job_queue.json"))
+refresh_lock = threading.Lock()
+refresh_state = {"running": False, "last_error": None}
 
 
-@app.get("/health")
-def health():
-    return jsonify({"status": "ok"})
-
-
-@app.get("/jobs")
-def jobs():
-    expected_token = os.getenv("COLLECTOR_TOKEN")
-    supplied_token = request.headers.get("X-Collector-Token")
-    if expected_token and supplied_token != expected_token:
-        return jsonify({"error": "unauthorized"}), 401
-
-    result = collect_jobs()
-    rows = result.to_dict(orient="records") if hasattr(result, "to_dict") else result
-    return jsonify({"jobs": rows, "count": len(rows)})
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
+def refresh_queue():
+    if not refresh_lock.acquire(blocking=False):
+        return
+    refresh_state["running"] = True
+    refresh_state["last_error"] = None
+    try:
+        result = collect_jobs()
+        rows = result.to_dict(orient="records") if hasattr(result, "to_dict") else result
+        queue_path.write_text(json.dumps(rows, indent=2, default=str), encoding="utf-8")
+    except Exception as error:
+        refresh_state["last_error"] = str(error)
+    finally:
+        refresh_state["running"] = False
