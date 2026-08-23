@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements-job-pipeline.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT collector_service:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 1 collector_service:app
     healthCheckPath: /health
     envVars:
       - key: COLLECTOR_TOKEN
@@ -18,7 +18,7 @@ services:
       - key: JOB_COUNTRY_INDEED
         value: India
       - key: JOB_RESULTS_WANTED
-        value: "20"
+        value: "50"
       - key: JOB_HOURS_OLD
         value: "168"
       - key: JOB_MIN_ANNUAL_INR
