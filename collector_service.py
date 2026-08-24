@@ -55,13 +55,13 @@ def jobs():
 
     if not queue_path.exists():
         threading.Thread(target=refresh_queue, daemon=True).start()
-        return jsonify({"error": "initial refresh started; retry shortly"}), 503
+        return jsonify(
+            {
+                "jobs": [],
+                "count": 0,
+                "refresh_running": True,
+                "message": "Initial refresh started. Run this node again after the refresh completes.",
+            }
+        )
 
     rows = json.loads(queue_path.read_text(encoding="utf-8"))
-    if not refresh_state["running"]:
-        threading.Thread(target=refresh_queue, daemon=True).start()
-    return jsonify({"jobs": rows, "count": len(rows), "refresh_running": refresh_state["running"]})
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
