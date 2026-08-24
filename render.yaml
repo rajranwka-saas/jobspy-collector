@@ -18,7 +18,7 @@ services:
       - key: JOB_COUNTRY_INDEED
         value: India
       - key: JOB_RESULTS_WANTED
-        value: "50"
+        value: "10"
       - key: JOB_HOURS_OLD
         value: "168"
       - key: JOB_MIN_ANNUAL_INR
