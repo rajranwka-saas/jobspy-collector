@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+import tempfile
 from pathlib import Path
 
 from flask import Flask, jsonify, request
@@ -22,7 +23,12 @@ def refresh_queue():
     try:
         result = collect_jobs()
         rows = result.to_dict(orient="records") if hasattr(result, "to_dict") else result
-        queue_path.write_text(json.dumps(rows, indent=2, default=str), encoding="utf-8")
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=queue_path.parent, delete=False
+        ) as temporary_file:
+            json.dump(rows, temporary_file, indent=2, default=str)
+            temporary_path = Path(temporary_file.name)
+        temporary_path.replace(queue_path)
     except Exception as error:
         refresh_state["last_error"] = str(error)
     finally:
@@ -59,9 +65,3 @@ def jobs():
             {
                 "jobs": [],
                 "count": 0,
-                "refresh_running": True,
-                "message": "Initial refresh started. Run this node again after the refresh completes.",
-            }
-        )
-
-    rows = json.loads(queue_path.read_text(encoding="utf-8"))
