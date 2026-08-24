@@ -89,5 +89,16 @@ def jobs():
     )
 
 
+@app.post("/refresh")
+def refresh():
+    expected_token = os.getenv("COLLECTOR_TOKEN")
+    supplied_token = request.headers.get("X-Collector-Token")
+    if expected_token and supplied_token != expected_token:
+        return jsonify({"error": "unauthorized"}), 401
+    if not refresh_state["running"]:
+        threading.Thread(target=refresh_queue, daemon=True).start()
+    return jsonify({"started": True, "refresh_running": True})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
