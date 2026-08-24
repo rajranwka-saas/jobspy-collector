@@ -3,9 +3,9 @@ services:
     name: jobspy-collector
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-job-pipeline.txt
+    buildCommand: pip install -r requirements-job-pipeline.txt && python -m py_compile collector_service.py job_pipeline.py
     startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 1 collector_service:app
-    healthCheckPath: /health
+    healthCheckPath: /
     envVars:
       - key: COLLECTOR_TOKEN
         generateValue: true
