@@ -49,7 +49,12 @@ def health():
 
 @app.get("/")
 def root():
-    return jsonify({"service": "jobspy-collector", "status": "ok", "health": "/health", "jobs": "/jobs"})
+    return jsonify(
+        service="jobspy-collector",
+        status="ok",
+        health="/health",
+        jobs="/jobs",
+    )
 
 
 @app.get("/jobs")
@@ -62,6 +67,27 @@ def jobs():
     if not queue_path.exists():
         threading.Thread(target=refresh_queue, daemon=True).start()
         return jsonify(
-            {
-                "jobs": [],
-                "count": 0,
+            jobs=[],
+            count=0,
+            refresh_running=True,
+            message="Initial refresh started. Run this node again after the refresh completes.",
+        )
+
+    try:
+        rows = json.loads(queue_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return jsonify(
+            error="queue is being refreshed; retry shortly",
+            detail=str(error),
+        ), 503
+    if not refresh_state["running"]:
+        threading.Thread(target=refresh_queue, daemon=True).start()
+    return jsonify(
+        jobs=rows,
+        count=len(rows),
+        refresh_running=refresh_state["running"],
+    )
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
